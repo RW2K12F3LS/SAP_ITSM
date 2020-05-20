@@ -12,100 +12,82 @@ import os
 import sys
 import pickle
 import numpy as np
-
-
-def adaCost(sample):
-    # 可以接受（样本数X特征数）这样的二维ndarray，也可以接受只有一个样本的一维数组（会自动转换为只有一行的二维数组）
-    # 输出一个一维ndarray，第i个元素（数字）代表第i个样本预测的围岩等级。
-    path = os.path.abspath(os.path.dirname(sys.argv[0]))
-    f = open(path + '/model/adaCost.pickle', 'rb')
-    s = f.read()
-    model = pickle.loads(s)
-    if len(sample.shape) == 1:
-        sample = sample.reshape(1, len(sample))
-    return model.predict(sample)
-
-
-def RF_CART(data):
-    path = os.path.abspath(os.path.dirname(sys.argv[0]))
-    clf_f = joblib.load(path + '/model/model_f.pkl')
-    clf_t = joblib.load(path + '/model/model_t.pkl')
-    result_t = clf_t.predict(data)
-    result_f = clf_f.predict(data)
-    return [result_t, result_f]
+from .models import get_relation, get_entity
+from py2neo import Node, Relationship, Graph, NodeMatcher, RelationshipMatcher
 
 
 @require_http_methods(["GET"])
-def RF1(request):
-    p = []
-    for i in json.loads(request.GET['data']).values():
-        p.append(float(i))
-    print(p)
-    response = RF_CART([p])
-    data = [response[0][0], response[1][0]]
-    return JsonResponse(data, safe=False)
+def get_answer(request):
+
+    question = request.GET['data']
+    relationship = get_relation(question)
+    identified_entities = get_entity(question)
+
+    graph = Graph('http://122.51.232.56:7474', username='', password='')
+
+    all_entities = []
+    for i in NodeMatcher(graph).match('o'):
+        all_entities.append((list(i.items())[0][1]))
+
+    match = []
+    for i in all_entities:
+        count = 0
+        for j in identified_entities:
+            if j in i:
+                count += 1
+        match.append(count)
+    identified_entities_backup = []
+    if max(match) == 0:  # 全0
+        identified_entities_backup = ' '.join(identified_entities).split(' ')
+        match = []
+        for i in all_entities:
+            count = 0
+            for j in identified_entities_backup:
+                if j.lower() in i.lower():
+                    count += 1
+            match.append(count)
+
+    def blah():
+        return "Please rephrase..."
+
+    while 1:
+        count_max = max(match)  # 实体匹配次数
+        if count_max == 0:  # 从关系出发+实体相似度
+            return JsonResponse(blah(), safe=False)
+        count_max_index = match.index(count_max)
+        match[count_max_index] = 0
+
+        start_node = all_entities[count_max_index]  # 保证找到需要的实体
+        start_node_relations = list(graph.run("match (a:o{content:'" + start_node +"'})-[re]->(b:o) return type(re)").to_table())
+        if relationship == 'has_step' and ('has_scenario',) in start_node_relations:
+            relationship = 'has_scenario'
+        if relationship == 'has_scenario' and ('has_step',) in start_node_relations:
+            relationship = 'has_step'
+        relationship_exist = False
+        for r in start_node_relations:
+            if relationship in r[0]:
+                relationship_exist = True
+                break
+
+        if relationship_exist:
+            answer_list = []
+            answer_un = graph.run(
+                "match (a:o{content:'" + start_node + "'})-[b:" + relationship + "]->(c:o) return c").data()
+            for i in answer_un:
+                answer_list.append(i['c']['content'])
+            answer_list.sort()
+
+            if relationship == 'has_step':  # 如是has_step 那么就自动追加detail如果有,其他只招一级
+                for i in answer_list:
+                    # 补充detail
+                    detail_un = graph.run("match (a:o{content:'" + i + "'})-[b:has_detail]->(c:o) return c").data()
+                    for j in detail_un:
+                        answer_list.insert(answer_list.index(i) + 1, j['c']['content'])
+                # answer_list.append(r"C:\Users\chend\Desktop\ITSM\Investigate_and_Diagnose _GEN_V.pdf#page=4")
+                return JsonResponse('\n'.join(answer_list), safe=False)
+
+        # 找不到需要的关系 循环
 
 
-@require_http_methods(["GET"])
-def RF2(request):
-    res = []
-    for i in json.loads(request.GET['data']).values():
-        p = []
-        for j in i:
-            p.append(float(j))
-        print(p)
-        response = RF_CART([p])
-        data = [response[0][0], response[1][0]]
-        res.append(data)
-    return JsonResponse(res, safe=False)
+    # file:///C:/Usxxxxx.pdf#page=4
 
-
-@require_http_methods(["GET"])
-def RF3(request):
-    response = {}
-    try:
-        response['result'] = int(request.GET['i']) - int(request.GET['j'])
-        response['res'] = "结果1"
-        response['error_num'] = 10
-    except Exception as e:
-        response['msg'] = str(e)
-        response['error_num'] = 1
-    return JsonResponse(response)
-
-
-@require_http_methods(["GET"])
-def AC1(request):
-    p = []
-    for i in json.loads(request.GET['data']).values():
-        p.append(float(i))
-    print(p)
-    p = np.array(p)
-    response = adaCost(p)
-    return JsonResponse(response, safe=False)
-
-
-@require_http_methods(["GET"])
-def AC2(request):
-    nd=[]
-    for i in json.loads(request.GET['data']).values():
-        p = []
-        for j in i:
-            p.append(float(j))
-        print(p)
-        nd.append(p)
-    nd = np.array(nd)
-    response = adaCost(nd)
-    return JsonResponse(response, safe=False)
-
-
-@require_http_methods(["GET"])
-def AC3(request):
-    response = {}
-    try:
-        response['result'] = int(request.GET['i']) - int(request.GET['j'])
-        response['res'] = "结果1"
-        response['error_num'] = 10
-    except Exception as e:
-        response['msg'] = str(e)
-        response['error_num'] = 1
-    return JsonResponse(response)

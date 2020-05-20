@@ -1,0 +1,44 @@
+label,text,desc
+0,"I have nm, what's next?",next
+0,"I have nm, what's the next step?",next
+0,"After nm, what should I do?",next
+0,What's next after nm?,next
+1,What's the detail of nm,has_detail
+1,Show the detail of nm,has_detail
+1,How to nm specifically,has_detail
+2,"I have nm, what's the previous step?",prev
+2,"I have nm, what's the pre step?",prev
+2,"Before nm, what should I do?",prev
+2,What's the step before nm?,prev
+3,the way to nm,has_scenario
+3,How can I nm,has_scenario
+3,I want to nm and what should I do,has_scenario
+3,What's the scenario of nm,has_scenario
+4,What's the step of nm,has_step
+4,How many steps of nm,has_step
+4,show the steps of nm,has_step
+5,What's the question of nm,has_question
+5,How many questions of nm,has_question
+5,show the questions of nm,has_question
+6,What is the purpose of nm,has_purpose
+6,Why do we nm,has_purpose
+6,What's the meaning of nm,has_purpose
+7,When do I nm,when
+7,When to nm,when
+7,In which situation do I nm,when
+7,In what priority do I nm,when
+8,What's the level of nm,has_level
+8,How many levels do nm have,has_level
+8,show the levels of nm,has_level
+9,What is nm,has_definition
+9,What the definition of nm,has_definition
+9,What does nm mean,has_definition
+9,show the definition of nm,has_definition
+10,What's the cause of nm,has_cause
+10,what cause nm,has_cause
+10,the cause of nm,has_cause
+10,nm is caused by,has_cause
+11,What's the effect of nm,has_effect
+11,What does nm effect,has_effect
+11,the effect of nm,has_effect
+11,nm effect what,has_effect
